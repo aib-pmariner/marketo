@@ -1,0 +1,333 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/2000/REC-xhtml1-200000126/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+
+
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<!-- SYSTEM CSS - DO NOT EDIT -->
+<link rel="stylesheet" type="text/css" media="screen" href="/css/mktLPSupport.css" />
+<link rel="stylesheet" type="text/css" media="screen" href="/css/mktLPSupport.css" />
+<style type="text/css">
+#bodyId {
+  text-align: center;
+  margin: 0px;
+  padding: 0px;
+}
+
+div#outerWrapDiv {
+  position: relative;
+  height: 100%;
+  width: 100%;
+}
+
+div#innerWrapDiv {
+  position: relative;
+  padding: 0px;
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 0px;
+  text-align: left;
+}
+
+</style>
+
+<!-- START TEMPLATE CSS - EDIT THIS SECTION -->
+
+<style>
+/* Note: You can also change these in the specific Landing Pages*/
+
+/* Width of Full Page */
+div#innerWrapDiv {
+  width: 775px;
+  }
+
+/* Main Content Area - Controls height of page */
+div#mktContent {
+  position: relative;
+  height: 450px;
+  width: 100%; }
+
+
+</style>
+
+<!-- END TEMPLATE CSS -->
+
+
+
+<!-- SYSTEM JAVASCRIPT - DO NOT EDIT -->
+<script type="text/javascript">
+function fieldValidate(field) {
+  /* call Mkto.setError(field, message) and return false to mark a field value invalid */
+  /* return 'skip' to bypass the built-in validations */
+  return true;
+}
+function getRequiredFieldMessage(domElement, label) {
+  return "This field is required";
+}
+function getTelephoneInvalidMessage(domElement, label) {
+  return "Please enter a valid telephone number";
+}
+function getEmailInvalidMessage(domElement, label) {
+  return "Please enter a valid email address";
+}
+</script>
+  
+<!-- Vimeo player api -->
+<script src="https://player.vimeo.com/api/player.js"></script>
+  
+<!-- shrink-wrap jQuery for *NORMAL* stuff! -->
+<script src="https://code.jquery.com/jquery-1.12.4.min.js" integrity="sha256-ZosEbRLbNQzLpnKIkEdrPv7lOy9C27hHQ+Xp8a4MxAQ=" crossorigin="anonymous"></script>
+
+
+<!-- Jquery for fancy things!-->
+<script language="JavaScript" src="https://app.marketo.com/js/public/jquery-latest.min.js" type="text/javascript"></script>
+
+ 
+   <script>
+    // to make fancy buttons.  Uses noConflict just in case
+     var $jQ = jQuery.noConflict();
+
+     // Use jQuery via $j(...)
+     $jQ(document).ready(function(){
+
+       $jQ("#mktFrmSubmit").wrap("<div class='buttonSubmit'></div>");
+       $jQ(".buttonSubmit").prepend("<span></span>");
+       
+       
+      var email = "nigel.rotorblade@geemale.com",
+      leadid = -1,
+      SFid = -1,           
+       
+   	  getToken = function(callBack){
+
+         // gets a Marketo auth token from our microservice. Only calls from internal localhost or aib.edu.au are allowed.
+           
+         $.ajax({
+           type: "POST",
+           crossDomain: true,
+           url: "http://www.aib.edu.au/rest/auth.php"}).done(function (d) { 
+           callBack(d);
+         }).fail(function(d) {
+
+         });
+       }, 	
+
+      mktoREST = function(mode, tok, updateData, callback){					
+
+          // client side REST for Marketo! 
+          $.ajax({
+            type: mode,
+            crossDomain: true,
+            data: updateData,
+            url: "http://www.aib.edu.au/rest/jsonproxy.php"}).done(function (d) { 
+            callback(d);
+          }).fail(function(d) {
+			       console.log("Marketo update Failed");
+             console.log(d);
+          });					
+        },	
+          
+      getUpdateObj = function(percent, seconds, hourGlass, duration, access_token){          
+          
+            var qs = window.location.search.replace("?", ""),
+            qs_arr = qs.split("&"),
+            el,
+            pv,
+            watchStatus = "",
+            lookupField = "",
+            lookup = "",
+            updateData = "";          
+
+            hourGlass / duration > 0.90 ? watchStatus = "More than 90% of video watched" : watchStatus = "Less than 90% of video watched";
+            
+
+            if(hourGlass == 0 && percent == 0){
+              watchStatus = "Video not watched";
+            }
+
+            for(el in qs_arr){
+              pv = qs_arr[el].split("=");
+              if(pv[0] == "email"){
+                email = pv[1];
+              }
+
+              if(pv[0] == "leadId"){
+                leadid = pv[1];
+              }
+
+               if(pv[0] == "SFid"){
+                SFid = pv[1];
+              }
+            } 
+              
+          
+        	if(SFid != -1){ 
+        		lookupField =  "Case_Safe_Lead_Id__c";
+          		lookup = SFid;        
+        	}
+         
+         	if(leadid != -1){ 
+        		lookupField =  "id";
+          		lookup = leadid;        
+        	}
+         
+         	if(SFid == -1 && leadid == -1){
+              lookupField = "email";
+              lookup = email;
+            }
+         
+          	updateData =
+            { 
+                 "marketo":[
+                   {
+                     "action": "updateOnly", 
+                     "input": [{                        
+                       "fullyQualifiedVideo": watchStatus,
+                       "Fully_Qualified_Video_Summary__c": watchStatus,
+                       "Fully_Qualified_Video_Percent__c": percent,
+                       "Fully_Qualified_Video_Play_Time__c": seconds,
+                       "Fully_Qualified_Video_Timer__c": hourGlass    
+                     }]
+                   }],
+                 "auth": access_token
+         	 };        
+          
+          	updateData["marketo"][0]["lookupField"] = lookupField;
+          	updateData["marketo"][0]["input"][0][lookupField] = lookup;         
+          
+          	return updateData;
+              	
+        },    	
+
+        updateVideoPercent = function(percent, seconds, hourGlass, duration){        
+
+          getToken(function(d){					
+            var dataObj = $.parseJSON(d),
+                access_token = dataObj.access_token;						
+
+            var updateData = getUpdateObj(percent, seconds, hourGlass, duration, access_token); 
+            // Updates the video watched status for this Marketo lead
+            mktoREST("POST", access_token, updateData, function(d){
+              console.log("Marketo video completion status updated");             
+            });
+          });
+        };				
+
+
+       // Initialise video status for this lead in Marketo 
+       getToken(function(d){
+         
+         var dataObj = 	$.parseJSON(d),
+         access_token = dataObj.access_token,
+         lookupField = "",
+         lookup = "";     						
+      
+         updateVideoPercent(0, 0, 0, 0, access_token);
+		      console.log("Marketo video completion status initialised to 0%");    
+       });					
+
+
+
+       var iframe = document.querySelector('iframe'),
+       player = new Vimeo.Player(iframe),	
+       waitTicks = 0,	
+       lastPercent = 0,
+       hourGlass = 0,
+       vidTime = window.setInterval(
+             function(){						
+               //document.getElementById("progress").value = 0;						
+
+               player.getCurrentTime().then(function(seconds) {						 
+                 player.getDuration().then(function(duration) {							  
+                   var percent = Math.floor((seconds / duration) * 100); 
+                   var ticks = 20;
+                  
+                   if(percent > 99){
+                     window.clearInterval(vidTime); // stop timer at 100% so it doesn't revert to zero!
+                     updateVideoPercent(percent, seconds, hourGlass, duration);
+                   }
+                   waitTicks++;
+                   hourGlass += 0.5;  // ticks x hourGlass is the time elapsed in seconds
+
+                   if(waitTicks > ticks){
+                     waitTicks = 0;
+                     if(percent > 0)	{	
+                       if(percent > lastPercent){
+                         updateVideoPercent(percent, seconds, hourGlass, duration);
+                         //console.log("Watched " + percent + "% (" +  seconds +  " seconds), timer: " + hourGlass + " seconds");
+                       }
+                       lastPercent = percent;
+                     }
+                   }
+
+                 }).catch(function(error) {
+                   // an error occurred
+                 });
+               }).catch(function(error) {
+                 // an error occurred
+               });
+
+             }
+         , 500); // ticks are 1/2 second     
+     
+     });
+     
+     
+</script>
+
+
+<!-- SYSTEM INCLUDES - DO NOT EDIT -->
+<?php echo $mContext['headElements']; ?>
+</head>
+<body id="bodyId" class="mktEditable" align="center" <?php echo $mContext['bodyAttributes'] ?>>
+<p>
+
+</p>
+<div id="outerWrapDiv" class="mktEditable">
+<div id="innerWrapDiv">
+<?php echo $mContext['bodyElements']; ?>
+
+<!-- START TEMPLATE HTML - EDIT THIS SECTION -->
+
+
+<div id="mktHeader" class="mktEditable">
+  <!-- Logo and Header -->
+</div>
+
+
+<div id="mktContent" class="mktEditable">
+<!-- Base of Landing Page Content -->
+
+      <div id="mktColumn" class="mktEditable">
+        <!-- Column.  Usually Leave this blank. -->
+      </div>
+
+</div>
+
+<div id="mktFooter" class="mktEditable">
+  <!-- Footer links -->
+</div>
+
+
+<!-- END TEMPLATE HTML -->
+
+
+<!-- SYSTEM FOOTER - DO NOT EDIT -->
+</div>
+</div>
+<?php echo $mContext['endElements']; ?>
+
+
+<!-- GOOGLE ANALYTICS.  ENTER YOUR CODE and UNCOMMENT block -->
+<!--
+<script src="http://www.google-analytics.com/urchin.js" type="text/javascript">
+</script>
+<script type="text/javascript">
+_uacct = "YOURCODE";
+urchinTracker();
+</script>
+-->
+
+</body>
+</html>
